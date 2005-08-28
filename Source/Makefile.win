@@ -1,0 +1,40 @@
+# Project: out_bridge
+# Makefile created by Dev-C++ 4.9.9.2
+
+CPP  = g++.exe
+CC   = gcc.exe
+WINDRES = windres.exe
+RES  = 
+OBJ  = ../Release_Temp/out_bridge.o ../Release_Temp/Console.o ../Release_Temp/DevilConfig.o $(RES)
+LINKOBJ  = ../Release_Temp/out_bridge.o ../Release_Temp/Console.o ../Release_Temp/DevilConfig.o $(RES)
+LIBS =  -L"lib" -L"F:/devcpp/qt4/lib" --no-export-all-symbols --add-stdcall-alias  -mwindows -s -mmmx 
+INCS =  -I"include"  -I"F:/devcpp/qt4/include/"  -I"F:/devcpp/qt4/include/Qt"  -I"F:/devcpp/qt4/include/QtGui" 
+CXXINCS =  -I"lib/gcc/mingw32/3.4.2/include"  -I"include/c++/3.4.2/backward"  -I"include/c++/3.4.2/mingw32"  -I"include/c++/3.4.2"  -I"include"  -I"F:/devcpp/qt4/include/"  -I"F:/devcpp/qt4/include/Qt"  -I"F:/devcpp/qt4/include/QtCore"  -I"F:/devcpp/qt4/include/QtGui" 
+BIN  = ../Release/out_bridge.dll
+CXXFLAGS = $(CXXINCS) -DBUILDING_DLL=1   -fexpensive-optimizations -O3 -mwindows -mmmx
+CFLAGS = $(INCS) -DBUILDING_DLL=1   -fexpensive-optimizations -O3 -mwindows -mmmx
+RM = rm -f
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before ../Release/out_bridge.dll all-after
+
+
+clean: clean-custom
+	${RM} $(OBJ) $(BIN)
+
+DLLWRAP=dllwrap.exe
+DEFFILE=../Release/libout_bridge.def
+STATICLIB=../Release/libout_bridge.a
+
+$(BIN): $(LINKOBJ)
+	$(DLLWRAP) --output-def $(DEFFILE) --driver-name c++ --implib $(STATICLIB) $(LINKOBJ) $(LIBS) -o $(BIN)
+
+../Release_Temp/out_bridge.o: out_bridge.cpp
+	$(CPP) -c out_bridge.cpp -o ../Release_Temp/out_bridge.o $(CXXFLAGS)
+
+../Release_Temp/Console.o: Console.cpp
+	$(CPP) -c Console.cpp -o ../Release_Temp/Console.o $(CXXFLAGS)
+
+../Release_Temp/DevilConfig.o: DevilConfig.cpp
+	$(CPP) -c DevilConfig.cpp -o ../Release_Temp/DevilConfig.o $(CXXFLAGS)
