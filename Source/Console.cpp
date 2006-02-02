@@ -250,15 +250,13 @@ LRESULT CALLBACK WndprocConsole( HWND hwnd, UINT message, WPARAM wp, LPARAM lp )
 	switch( message )
 	{
 	case WM_CONTEXTMENU:
-		{
-			if( bContextOpen ) break;
-			bContextOpen = TRUE;
+		if( bContextOpen ) break;
+		bContextOpen = TRUE;
 
-			PopupMenu();
+		PopupMenu();
 
-			bContextOpen = FALSE;
-			break;
-		}
+		bContextOpen = FALSE;
+		break;
 
 	case WM_GETMINMAXINFO:
 		{
@@ -267,6 +265,14 @@ LRESULT CALLBACK WndprocConsole( HWND hwnd, UINT message, WPARAM wp, LPARAM lp )
 			mmi->ptMinTrackSize.y = 200;
 			return 0;
 		}
+		
+	case WM_SYSCOMMAND:
+		if( wp == SC_CLOSE )
+		{
+			return 0;
+		}
+		break;
+		
 	}
 	return CallWindowProc( WndprocConsoleBackup, hwnd, message, wp, lp );
 }

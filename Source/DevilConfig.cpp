@@ -2,14 +2,14 @@
 
     /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
     *                                                                 *
-    *   DEVIL Screensaver System 1.02                                 *
+    *   DEVIL Screensaver System 1.03                                 *
     *   Copyright © 2005 Sebastian Pipping <webmaster@hartwork.org>   *
     *                                                                 *
     *   --> http://www.hartwork.org                                   *
     *                                                                 *
     *                                                                 *
     *   This source code is released under LGPL.                      *
-    *   See LGPL.txt for details.                        2005-08-26   *
+    *   See LGPL.txt for details.                        2005-08-31   *
     *                                                                 *
     \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -95,6 +95,22 @@ DEVIL_CONFIG::DEVIL_CONFIG( HMODULE hMod )
 DEVIL_CONFIG::DEVIL_CONFIG( const TCHAR * szCopySection, HMODULE hMod )
 {
 	Init( szCopySection, hMod );
+}
+
+
+
+// *****************************************************************************
+DEVIL_CONFIG::DEVIL_CONFIG( const TCHAR * szCopySection, const TCHAR * szFilename )
+{
+	const UINT uFilenameLen = _tcslen( szFilename );
+	szIniPath = new TCHAR[ uFilenameLen + 1 ];
+	memcpy( szIniPath, szFilename, uFilenameLen * sizeof( TCHAR ) );
+	szIniPath[ uFilenameLen ] = TEXT( '\0' );
+	
+	const UINT uSectionLen = _tcslen( szCopySection );
+	szSection = new TCHAR[ uSectionLen + 1 ];
+	memcpy( szSection, szCopySection, uSectionLen * sizeof( TCHAR ) );
+	szSection[ uSectionLen ] = TEXT( '\0' );
 }
 
 

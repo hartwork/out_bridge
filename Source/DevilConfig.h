@@ -2,14 +2,14 @@
 
     /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
     *                                                                 *
-    *   DEVIL Screensaver System 1.02                                 *
+    *   DEVIL Screensaver System 1.03                                 *
     *   Copyright © 2005 Sebastian Pipping <webmaster@hartwork.org>   *
     *                                                                 *
     *   --> http://www.hartwork.org                                   *
     *                                                                 *
     *                                                                 *
     *   This source code is released under LGPL.                      *
-    *   See LGPL.txt for details.                        2005-08-26   *
+    *   See LGPL.txt for details.                        2005-08-31   *
     *                                                                 *
     \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -18,8 +18,11 @@
 #define DEVIL_CONFIG_H
 
 
-// #include "DevilGlobal.h"
+////////////////////////////////////////////////////////////////////////////////
+///  BEGIN OUTBRIDGE MOD
+////////////////////////////////////////////////////////////////////////////////
 
+// #include "DevilGlobal.h"
 
 // For GetLongPathName
 #if _WIN32_WINDOWS < 0x0410
@@ -30,6 +33,10 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <tchar.h>
+
+////////////////////////////////////////////////////////////////////////////////
+//  END OUTBRIDGE MOD
+////////////////////////////////////////////////////////////////////////////////
 
 
 #include <stdlib.h>
@@ -45,6 +52,7 @@ private:
 public:
 	DEVIL_CONFIG( HMODULE hMod = NULL );
 	DEVIL_CONFIG( const TCHAR * szCopySection, HMODULE hMod = NULL );
+	DEVIL_CONFIG( const TCHAR * szCopySection, const TCHAR * szFilename );
 	~DEVIL_CONFIG();
 
 	bool Write( const TCHAR * szKey, const double fValue );

@@ -2,14 +2,14 @@
 
     /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
     *                                                                 *
-    *   Outbridge Winamp Plugin 1.0                                   *
-    *   Copyright © 2005 Sebastian Pipping <webmaster@hartwork.org>   *
+    *   Outbridge Winamp Plugin 2.1                                   *
+    *   Copyright © 2006 Sebastian Pipping <webmaster@hartwork.org>   *
     *                                                                 *
     *   --> http://www.hartwork.org                                   *
     *                                                                 *
     *                                                                 *
     *   This source code is released under LGPL.                      *
-    *   See LGPL.txt for details.                        2005-08-28   *
+    *   See LGPL.txt for details.                        2006-02-02   *
     *                                                                 *
     \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -27,8 +27,6 @@ typedef Out_Module * ( * WINAMPGETOUTMODULE )();
 HINSTANCE g_hMasterInstance = NULL; // extern
 DEVIL_CONFIG * g_pCONFIG = NULL;
 
-bool bSlaveLoaded = false;
-bool bWindowSet = false;
 HINSTANCE g_hSlaveInstance = NULL;
 Out_Module * g_pModSlave = NULL;
 
@@ -59,6 +57,9 @@ int cxNormalPosition; // extern
 int cyNormalPosition; // extern
 
 
+UINT_PTR hMainHandleTimer = 0;
+
+
 void Config( HWND p );
 void About( HWND p );
 void Init();
@@ -76,10 +77,23 @@ int GetWrittenTime();
 int GetOutputTime();
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  ReadConfig
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  GetCurrentModule
+////////////////////////////////////////////////////////////////////////////////
+HMODULE GetCurrentModule()
+{
+	MEMORY_BASIC_INFORMATION mbi;
+	static int dummy;
+	VirtualQuery( &dummy, &mbi, sizeof( MEMORY_BASIC_INFORMATION ) );
+	return ( HMODULE )mbi.AllocationBase;
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//  ReadConfig
+////////////////////////////////////////////////////////////////////////////////
 void ReadConfig()
 {
 	if( !g_pCONFIG ) return;
@@ -111,10 +125,10 @@ void ReadConfig()
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  WriteConfig
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  WriteConfig
+////////////////////////////////////////////////////////////////////////////////
 void WriteConfig()
 {
 	if( !g_pCONFIG ) return;
@@ -145,290 +159,177 @@ void WriteConfig()
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  g_ModMaster
-////////////////////////////////////////////////////////////////////////////////
 
-Out_Module g_ModMaster = {
-	OUT_VER,                    // int version
-	"Outbridge Winamp Plugin",  // char * description
-	66666,                      // int id
-	0,                          // HWND hMainWindow
-	0,                          // HINSTANCE hDllInstance
-	Config,
-	About,
-	Init,
-	Quit,
-	Open,
-	Close,
-	Write,
-	CanWrite,
-	IsPlaying,
-	Pause,
-	SetVolume,
-	SetPan,
-	Flush,
-	GetOutputTime,
-	GetWrittenTime,
+////////////////////////////////////////////////////////////////////////////////
+//  g_OutModMaster
+////////////////////////////////////////////////////////////////////////////////
+Out_Module g_OutModMaster = {
+	OUT_VER,            // int version
+	NULL,               // char * description
+	0,                  // int id
+	0,                  // HWND hMainWindow
+	0,                  // HINSTANCE hDllInstance
+	Config,             // void ( * Config )( HWND hwndParent )
+	About,              // void ( * About )( HWND hwndParent )
+	Init,               // void ( * Init )()
+	Quit,               // void ( * Quit )()
+	Open,               // int ( *Open )( int samplerate, int numchannels, int bitspersamp, int bufferlenms, int prebufferms )
+	Close,              // void ( * Close )()
+	Write,              // int ( * Write )( char * buf, int len )
+	CanWrite,           // int ( * CanWrite )()
+	IsPlaying,          // int ( * IsPlaying )()
+	Pause,              // int ( * Pause )( int pause )
+	SetVolume,          // void ( * SetVolume )( int volume )
+	SetPan,             // void ( * SetPan )( int pan )
+	Flush,              // void ( * Flush )( int t )
+	GetOutputTime,      // int ( * GetOutputTime )()
+	GetWrittenTime,     // int ( * GetWrittenTime )()
 };
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  Config
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  Config
+////////////////////////////////////////////////////////////////////////////////
 void Config( HWND p )
 {
-	if( !bSlaveLoaded ) return;
-
-	// Set window handle as soon as available
-	if( !bWindowSet && g_ModMaster.hMainWindow )
-	{
-		g_pModSlave->hMainWindow = g_ModMaster.hMainWindow;
-		bWindowSet = true;
-	}
-
 	if( bLogConfig )
 	{
+		Console::Append( "Config( HWND p )" );
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "Config( p = %i )", ( int )p );
+		sprintf( szBuffer, "   p = %i", ( int )p );
 		Console::Append( szBuffer );
+		Console::Append( " " );
 	}
 	
 	g_pModSlave->Config( p );
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  About
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  About
+////////////////////////////////////////////////////////////////////////////////
 void About( HWND p )
 {
-	if( !bSlaveLoaded ) return;
-
-	// Set window handle as soon as available
-	if( !bWindowSet && g_ModMaster.hMainWindow )
-	{
-		g_pModSlave->hMainWindow = g_ModMaster.hMainWindow;
-		bWindowSet = true;
-	}
-
 	if( bLogAbout )
 	{
+		Console::Append( "About( HWND p )" );
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "About( p = %i )", ( int )p );
+		sprintf( szBuffer, "   p = %i", ( int )p );
 		Console::Append( szBuffer );
+		Console::Append( " " );
 	}
 
 	g_pModSlave->About( p );
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  Init
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  Init
+////////////////////////////////////////////////////////////////////////////////
 void Init()
 {
-	// Instance handle is now filled
-	// but window handle is still missing
-	g_hMasterInstance = g_ModMaster.hDllInstance;
-
-
-	// Get master path
-	char szFullpath[ 1024 ] = "\0";
-	GetModuleFileName( g_hMasterInstance, szFullpath, 1024 - 6 - 1 );
-
-
-	// Get slave path
-	const int iFullLathLen = strlen( szFullpath );
-	char * walk = szFullpath + iFullLathLen;
-	while( ( walk > szFullpath ) && ( *walk != '\\' ) ) walk--;
-	walk++;
-	char * szSlaveBasename = new char[ szFullpath + iFullLathLen - walk + 1 ];
-	szSlaveBasename[ 0 ] = '\0';
-	strcpy( szSlaveBasename, walk );      // Save master szSlaveBasename
-	strcpy( walk, "slave_" );
-	strcpy( walk + 6, szSlaveBasename );  // Append master szSlaveBasename to make full slave filename
-    delete [] szSlaveBasename;
-	szSlaveBasename = walk;
-
-
-	// Load slave dll
-	g_hSlaveInstance = LoadLibrary( szFullpath );
-	if( !g_hSlaveInstance )
-	{
-		_strlwr( szSlaveBasename );
-		char szBuffer[ 1000 ];
-		wsprintf(
-			szBuffer,
-			"Slave plugin could not be loaded:\n"
-			"    %s  \n"
-			"\n"
-			"NOTE:\tRenaming the master file also affects  \n"
-			"\tthe expected filename of the slave.",
-			szSlaveBasename
-		);
-		MessageBox( NULL, szBuffer, "Slave plugin error", MB_ICONINFORMATION );
-		return;
-	}
-
-
-	// Find export
-	WINAMPGETOUTMODULE winampGetOutModule =
-		( WINAMPGETOUTMODULE )GetProcAddress( g_hSlaveInstance, "winampGetOutModule" );
-	if( !winampGetOutModule )
-	{
-		FreeLibrary( g_hSlaveInstance );
-		return;
-	}
-
-
-	// Get module
-	g_pModSlave = winampGetOutModule();
-	if( !g_pModSlave )
-	{
-		FreeLibrary( g_hSlaveInstance );
-		return;
-	}
-
-
-	// Version mismatch?
-	if( g_pModSlave->version != OUT_VER )
-	{
-		FreeLibrary( g_hSlaveInstance );
-		return;
-
-	}
-	
-
-	// Modify slave
-	g_pModSlave->hDllInstance = g_hSlaveInstance;
-	
-	// Modfiy master
-	g_ModMaster.description  = g_pModSlave->description;
-
-	
-	// Read config
-	g_pCONFIG = new DEVIL_CONFIG( "Outbridge", g_hMasterInstance );
-	ReadConfig();
-	
-
-	Console::Create( walk + 6 );
-	Console::Append( "Outbridge Winamp Plugin 1.0" );
-	Console::Append( "http://www.hartwork.org" );
-	Console::Append( " " );
-	Console::Append( "Right-click for settings" );
-	Console::Append( " " );
-
-
-	bSlaveLoaded = true;
-		
-	
 	if( bLogInit )
 	{
 		Console::Append( "Init()" );
+		Console::Append( " " );
 	}
 
 	g_pModSlave->Init();
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  Quit
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  Quit
+////////////////////////////////////////////////////////////////////////////////
 void Quit()
 {
-	if( !bSlaveLoaded )
-	{
-		WriteConfig();
-		return;
-	}
-	
 	if( bLogQuit )
 	{
 		Console::Append( "Quit()" );
+		Console::Append( " " );
 	}
 
 	g_pModSlave->Quit();
+
+	// Unload DLL
+	FreeLibrary( g_hSlaveInstance );
 
 	// Destroy console
 	Console::Destroy();
 	
 	// Save config
 	WriteConfig();
-	
-	// Unload DLL
-	FreeLibrary( g_hSlaveInstance );
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  Open
-////////////////////////////////////////////////////////////////////////////////
 
-int Open( int sr, int nch, int bps, int bufferlenms, int prebufferms )
+////////////////////////////////////////////////////////////////////////////////
+//  Open
+////////////////////////////////////////////////////////////////////////////////
+int Open( int sr, int nch, int bps, int len_ms, int pre_len_ms )
 {
-	if( !bSlaveLoaded ) return -1; // Error
-
-	// Set window handle as soon as available
-	if( !bWindowSet && g_ModMaster.hMainWindow )
-	{
-		g_pModSlave->hMainWindow = g_ModMaster.hMainWindow;
-		bWindowSet = true;
-	}
-
 	if( bLogOpen )
 	{
+		Console::Append( "Open( int sr, int nch, int bps, int len_ms, int pre_len_ms )" );
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "Open( sr = %i, nch = %i, bps = %i, bufferlenms = %i, prebufferms = %i )", sr, nch, bps, bufferlenms, prebufferms );
+		sprintf( szBuffer, "   sr = %i", sr );
+		Console::Append( szBuffer );
+		sprintf( szBuffer, "   nch = %i", nch );
+		Console::Append( szBuffer );
+		sprintf( szBuffer, "   bps = %i", bps );
+		Console::Append( szBuffer );
+		sprintf( szBuffer, "   len_ms = %i", len_ms );
+		Console::Append( szBuffer );
+		sprintf( szBuffer, "   pre_len_ms = %i", pre_len_ms );
 		Console::Append( szBuffer );
 	}
 
-	int res = g_pModSlave->Open( sr, nch, bps, bufferlenms, prebufferms );
+	int res = g_pModSlave->Open( sr, nch, bps, len_ms, pre_len_ms );
 	
 	if( bLogOpen )
 	{
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "   = %i", res );
+		sprintf( szBuffer, "result = %i", res );
 		Console::Append( szBuffer );
+		Console::Append( " " );
 	}
 	
 	return res;
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  Close
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  Close
+////////////////////////////////////////////////////////////////////////////////
 void Close()
 {
-	if( !bSlaveLoaded ) return;
-	
 	if( bLogClose )
 	{
 		Console::Append( "Close()" );
+		Console::Append( " " );
 	}
 
 	g_pModSlave->Close();
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  Write
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  Write
+////////////////////////////////////////////////////////////////////////////////
 int Write( char * data, int size )
 {
-	if( !bSlaveLoaded ) return 1; // Not able to write
-
 	if( bLogWrite )
 	{
+		Console::Append( "Write( char * data, int size )" );
+		Console::Append( "   data = ..." );
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "Write( data = ..., size = %i )", size );
+		sprintf( szBuffer, "   size = %i", size );
 		Console::Append( szBuffer );
 	}
 
@@ -437,22 +338,21 @@ int Write( char * data, int size )
 	if( bLogWrite )
 	{
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "   = %i", res );
+		sprintf( szBuffer, "result = %i", res );
 		Console::Append( szBuffer );
+		Console::Append( " " );
 	}
 	
 	return res;
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  CanWrite
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  CanWrite
+////////////////////////////////////////////////////////////////////////////////
 int CanWrite()
 {
-	if( !bSlaveLoaded ) return 0; // Not able to write
-	
 	if( bLogCanWrite )
 	{
 		Console::Append( "CanWrite()" );
@@ -463,22 +363,21 @@ int CanWrite()
 	if( bLogCanWrite )
 	{
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "   = %i", res );
+		sprintf( szBuffer, "result = %i", res );
 		Console::Append( szBuffer );
+		Console::Append( " " );
 	}
 	
 	return res;
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  IsPlaying
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  IsPlaying
+////////////////////////////////////////////////////////////////////////////////
 int IsPlaying()
 {
-	if( !bSlaveLoaded ) return 0; // Not playing
-
 	if( bLogIsPlaying )
 	{
 		Console::Append( "IsPlaying()" );
@@ -489,26 +388,26 @@ int IsPlaying()
 	if( bLogIsPlaying )
 	{
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "   = %i", res );
+		sprintf( szBuffer, "result = %i", res );
 		Console::Append( szBuffer );
+		Console::Append( " " );
 	}
 	
 	return res;
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  Pause
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  Pause
+////////////////////////////////////////////////////////////////////////////////
 int Pause( int new_state )
 {
-	if( !bSlaveLoaded ) return 0; // Not paused
-	
 	if( bLogPause )
 	{
+		Console::Append( "Pause( int new_state )" );
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "Pause( new_state = %i )", new_state );
+		sprintf( szBuffer, "   new_state = %i", new_state );
 		Console::Append( szBuffer );
 	}
 
@@ -517,93 +416,78 @@ int Pause( int new_state )
 	if( bLogPause )
 	{
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "   = %i", res );
+		sprintf( szBuffer, "result = %i", res );
 		Console::Append( szBuffer );
+		Console::Append( " " );
 	}
 	
 	return res;
 }	
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  SetVolume
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  SetVolume
+////////////////////////////////////////////////////////////////////////////////
 void SetVolume( int v )
 {
-	if( !bSlaveLoaded ) return;
-
-	// Set window handle as soon as available
-	if( !bWindowSet && g_ModMaster.hMainWindow )
-	{
-		g_pModSlave->hMainWindow = g_ModMaster.hMainWindow;
-		bWindowSet = true;
-	}
-
 	if( bLogSetVolume )
 	{
+		Console::Append( "SetVolume( int v )" );
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "SetVolume( v = %i )", v );
+		sprintf( szBuffer, "   v = %i", v );
 		Console::Append( szBuffer );
+		Console::Append( " " );
 	}
 	
 	g_pModSlave->SetVolume( v );
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  SetPan
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  SetPan
+////////////////////////////////////////////////////////////////////////////////
 void SetPan( int p )
 {
-	if( !bSlaveLoaded ) return;
-
-	// Set window handle as soon as available
-	if( !bWindowSet && g_ModMaster.hMainWindow )
-	{
-		g_pModSlave->hMainWindow = g_ModMaster.hMainWindow;
-		bWindowSet = true;
-	}
-
 	if( bLogSetPan )
 	{
+		Console::Append( "SetPan( int p )" );
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "SetPan( p = %i )", p );
+		sprintf( szBuffer, "   p = %i", p );
 		Console::Append( szBuffer );
+		Console::Append( " " );
 	}
 	
 	g_pModSlave->SetPan( p );
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  Flush
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  Flush
+////////////////////////////////////////////////////////////////////////////////
 void Flush( int pos )
 {
-	if( !bSlaveLoaded ) return;
-	
 	if( bLogFlush )
 	{
+		Console::Append( "Flush( int pos )" );
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "Flush( pos = %i )", pos );
+		sprintf( szBuffer, "   pos = %i", pos );
 		Console::Append( szBuffer );
+		Console::Append( " " );
 	}
 	
 	g_pModSlave->Flush( pos );
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  GetWrittenTime
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  GetWrittenTime
+////////////////////////////////////////////////////////////////////////////////
 int GetWrittenTime()
 {
-	if( !bSlaveLoaded ) return 0; // Nothing written
-	
 	if( bLogGetWrittenTime )
 	{
 		Console::Append( "GetWrittenTime()" );
@@ -614,22 +498,21 @@ int GetWrittenTime()
 	if( bLogGetWrittenTime )
 	{
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "   = %i", res );
+		sprintf( szBuffer, "result = %i", res );
 		Console::Append( szBuffer );
+		Console::Append( " " );
 	}
 	
 	return res;
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  GetOutputTime
-////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////
+//  GetOutputTime
+////////////////////////////////////////////////////////////////////////////////
 int GetOutputTime()
 {
-	if( !bSlaveLoaded ) return 0; // At the beginning
-	
 	if( bLogGetOutputTime )
 	{
 		Console::Append( "GetOutputTime()" );
@@ -640,19 +523,163 @@ int GetOutputTime()
 	if( bLogGetOutputTime )
 	{
 		char szBuffer[ 500 ];
-		sprintf( szBuffer, "   = %i", res );
+		sprintf( szBuffer, "result = %i", res );
 		Console::Append( szBuffer );
+		Console::Append( " " );
 	}
 	
 	return res;
 }
 
 
-////////////////////////////////////////////////////////////////////////////////
-///  winampGetOutModule
-////////////////////////////////////////////////////////////////////////////////
 
+//////////////////////////////////////////////////////////////////////////////// 
+//  MainHandleTimerProc
+//////////////////////////////////////////////////////////////////////////////// 
+VOID CALLBACK MainHandleTimerProc( HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime )
+{
+	static bool bStayOut = false;
+
+	if( bStayOut )
+	{
+		return;
+	}
+	
+	if( g_OutModMaster.hMainWindow )
+	{
+		bStayOut = true;
+//////////////////////////////////////////////////////////////////////////////// 
+
+		KillTimer( NULL, hMainHandleTimer );
+		hMainHandleTimer = 0;
+
+		g_pModSlave->hMainWindow = g_OutModMaster.hMainWindow;
+
+		Console::Append( ">> Main window handle found <<" );
+		Console::Append( " " );
+
+//////////////////////////////////////////////////////////////////////////////// 
+		bStayOut = false;
+	}
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+//  winampGetOutModule
+////////////////////////////////////////////////////////////////////////////////
 extern "C" __declspec( dllexport ) Out_Module * winampGetOutModule()
 {
-	return &g_ModMaster;
+	g_hMasterInstance = ( HINSTANCE )GetCurrentModule();
+	g_OutModMaster.hDllInstance = g_hMasterInstance;
+
+
+	// Get master path
+	char szFullpath[ MAX_PATH ] = "";
+	GetModuleFileName( g_hMasterInstance, szFullpath, MAX_PATH - 6 - 1 );
+	const int iFullLathLen = strlen( szFullpath );
+
+	// Get slave path
+	char * walk = szFullpath + iFullLathLen - 1; // Last char
+	while( ( walk > szFullpath ) && ( *walk != '\\' ) ) walk--;
+	walk++;
+	
+	// Backup basename e.g. "out_ds.dll"
+	const int iBackupLen = ( szFullpath + iFullLathLen ) - walk;
+	char * szBackup = new char[ iBackupLen + 1 ];
+	memcpy( szBackup, walk, iBackupLen );
+	szBackup[ iBackupLen ] = '\0';
+	
+	// Make plugin.ini path for config
+	memcpy( walk, "plugin.ini\0", 11 );
+
+	// Make section name for config
+	char * szSection = new char[ 10 + iBackupLen + 1 ];
+	sprintf( szSection, "Outbridge, %s", szBackup );
+
+	// Read config
+	g_pCONFIG = new DEVIL_CONFIG( szSection, szFullpath );
+	ReadConfig();
+
+	// Make slave plugin path
+	memcpy( walk, "slave_", 6 );
+	walk += 6;
+	memcpy( walk, szBackup, iBackupLen );
+	walk[ iBackupLen ] = '\0';
+	char * szBasename = walk;
+
+	// Not needed anymore
+    delete [] szBackup;
+    delete [] szSection;
+
+
+	// Load slave dll
+	g_hSlaveInstance = LoadLibrary( szFullpath );
+	if( !g_hSlaveInstance )
+	{
+		_strlwr( szBasename );
+		char szBuffer[ 1000 ];
+		wsprintf(
+			szBuffer,
+			"Slave plugin could not be loaded:\n"
+			"    %s  \n"
+			"\n"
+			"NOTE:\tRenaming the master file also affects  \n"
+			"\tthe expected filename of the slave.",
+			szBasename
+		);
+		MessageBox( NULL, szBuffer, "Slave plugin error", MB_ICONINFORMATION );
+		return NULL;
+	}
+
+
+	// Find export
+	WINAMPGETOUTMODULE winampGetOutModule =
+		( WINAMPGETOUTMODULE )GetProcAddress( g_hSlaveInstance, "winampGetOutModule" );
+	if( !winampGetOutModule )
+	{
+		FreeLibrary( g_hSlaveInstance );
+		return NULL;
+	}
+
+
+	// Get module
+	g_pModSlave = winampGetOutModule();
+	if( !g_pModSlave )
+	{
+		FreeLibrary( g_hSlaveInstance );
+		return NULL;
+	}
+
+
+	// Version mismatch?
+	if( g_pModSlave->version != OUT_VER )
+	{
+		FreeLibrary( g_hSlaveInstance );
+		return NULL;
+	}
+	
+
+	// Modify slave
+	g_pModSlave->hDllInstance   = g_hSlaveInstance;
+	
+	// Modfiy master
+	g_OutModMaster.description  = g_pModSlave->description;
+	g_OutModMaster.id           = g_pModSlave->id;
+
+
+	// Initialize console
+	Console::Create( szBasename );
+	Console::Append( "Outbridge Winamp Plugin 2.1" );
+	Console::Append( "http://www.hartwork.org" );
+	Console::Append( " " );
+	Console::Append( "Right-click for settings" );
+	Console::Append( "=================================================" );
+	Console::Append( " " );
+
+
+	// Start main window detection
+	hMainHandleTimer = SetTimer( NULL, 0, 333, MainHandleTimerProc );
+
+	return &g_OutModMaster;
 }

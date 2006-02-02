@@ -1,0 +1,29 @@
+# depslib dependency file v1.0
+1125520894 f:\projects_devcpp\cpp___outbridge winamp plugin\source\devilconfig.cpp
+	"DevilConfig.h"
+	<stdio.h>
+
+1125607786 f:\projects_devcpp\cpp___outbridge winamp plugin\source\devilconfig.h
+	<windows.h>
+	<tchar.h>
+	<stdlib.h>
+
+1138846220 f:\projects_devcpp\cpp___outbridge winamp plugin\source\out_bridge.cpp
+	"Global.h"
+	"Console.h"
+	"DevilConfig.h"
+	"Winamp/Out.h"
+	<stdio.h>
+
+1125257638 f:\projects_devcpp\cpp___outbridge winamp plugin\source\global.h
+	<Windows.h>
+
+1125257642 f:\projects_devcpp\cpp___outbridge winamp plugin\source\console.h
+	"Global.h"
+
+905113904 f:\projects_devcpp\cpp___outbridge winamp plugin\source\winamp\out.h
+
+1138846006 f:\projects_devcpp\cpp___outbridge winamp plugin\source\console.cpp
+	"Console.h"
+	<time.h>
+

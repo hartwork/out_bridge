@@ -1,52 +1,16 @@
-[Editor_0]
-CursorCol=24
-CursorRow=642
-TopLine=625
-LeftChar=1
-Open=1
-Top=1
-[Editors]
-Focused=0
-Order=0
-[Editor_1]
-Open=0
-Top=0
-CursorCol=1
-CursorRow=17
-TopLine=1
-LeftChar=1
-[Editor_2]
-Open=0
-Top=0
-CursorCol=1
-CursorRow=17
-TopLine=1
-LeftChar=1
-[Editor_3]
-Open=0
-Top=0
-CursorCol=1
-CursorRow=17
-TopLine=19
-LeftChar=1
-[Editor_4]
-Open=0
-Top=0
-CursorCol=21
-CursorRow=31
-TopLine=13
-LeftChar=1
-[Editor_5]
-Open=0
-Top=0
-CursorCol=1
-CursorRow=1
-TopLine=1
-LeftChar=1
-[Editor_6]
-Open=0
-Top=0
-CursorCol=1
-CursorRow=1
-TopLine=1
-LeftChar=1
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_layout_file>
+    <ActiveTarget index="-1" />
+    <File name="Console.cpp" open="0" top="0">
+        <Cursor position="10065" topLine="246" />
+    </File>
+    <File name="Winamp\Out.h" open="0" top="0">
+        <Cursor position="2026" topLine="20" />
+    </File>
+    <File name="out_bridge.cpp" open="0" top="0">
+        <Cursor position="19214" topLine="653" />
+    </File>
+    <Expand folder="/Sources" />
+    <Expand folder="/Headers/Winamp" />
+    <Expand folder="/Headers" />
+</CodeBlocks_layout_file>
