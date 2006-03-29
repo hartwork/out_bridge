@@ -1,4 +1,4 @@
-@echo off
-del Release\*.a
-del Release\*.def
-del Release_Temp\*.o
+@ECHO OFF
+DEL Build\*.depend
+DEL Build\*.layout
+RMDIR /S /Q Build\.objs

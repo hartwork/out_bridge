@@ -2,14 +2,14 @@
 
     /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\
     *                                                                 *
-    *   Outbridge Winamp Plugin 2.1                                   *
+    *   Outbridge Winamp Plugin 2.2                                   *
     *   Copyright © 2006 Sebastian Pipping <webmaster@hartwork.org>   *
     *                                                                 *
     *   --> http://www.hartwork.org                                   *
     *                                                                 *
     *                                                                 *
     *   This source code is released under LGPL.                      *
-    *   See LGPL.txt for details.                        2006-02-02   *
+    *   See LGPL.txt for details.                        2006-03-29   *
     *                                                                 *
     \* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -247,6 +247,17 @@ void Init()
 ////////////////////////////////////////////////////////////////////////////////
 void Quit()
 {
+	// In case Quit() is called right after Init()
+	// which can happen when Plainamp scans the plugin
+	// the timer is still running which means we are
+	// unloading the plugin although is still running.
+	// Bad idea so we have to stop the timer.
+	if( hMainHandleTimer )
+	{
+		KillTimer( NULL, hMainHandleTimer );
+		hMainHandleTimer = 0;
+	}
+
 	if( bLogQuit )
 	{
 		Console::Append( "Quit()" );
@@ -670,7 +681,7 @@ extern "C" __declspec( dllexport ) Out_Module * winampGetOutModule()
 
 	// Initialize console
 	Console::Create( szBasename );
-	Console::Append( "Outbridge Winamp Plugin 2.1" );
+	Console::Append( "Outbridge Winamp Plugin 2.2" );
 	Console::Append( "http://www.hartwork.org" );
 	Console::Append( " " );
 	Console::Append( "Right-click for settings" );
